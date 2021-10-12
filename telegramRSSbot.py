@@ -262,18 +262,19 @@ def rss_monitor(context):
             feed_descriptions = []
             # check whether the URL & title of the latest item is in the database
             rss_d = feedparser.parse(url_list[0])
-            if (url_list[1] != rss_d.entries[0]['description'] and url_list[2] != rss_d.entries[0]['title'] and url_list[3] != rss_d.entries[0]['link']):
+            if (url_list[1] != rss_d.entries[0]['link'] and url_list[2] != rss_d.entries[0]['title']):
                 # check until a new item pops up
                 while (url_list[1] != rss_d.entries[feed_count]['description'] and url_list[2] != rss_d.entries[feed_count]['title']):
                     feed_titles.insert(0, rss_d.entries[feed_count]['title'])
-                    feed_urls.insert(0, rss_d.entries[feed_count]['description'])
-                    feed_urls.insert(0, rss_d.entries[feed_count]['description'])
+                    feed_urls.insert(0, rss_d.entries[feed_count]['link'])
+                    feed_descriptions.insert(0, rss_d.entries[feed_count]['description'])
+                   
                     feed_count += 1
                 for x in range(len(feed_urls)):
-                    feed_info = f"{CUSTOM_MESSAGES}\n<b>{feed_titles[x]}</b>\n{feed_urls[x]}</b>\n{feed_descriptions[x]}"
+                    feed_info = f"{CUSTOM_MESSAGES}\n<b><u>{feed_titles[x]}</u></b>👉 {feed_urls[x]}\n\n<i>{feed_descriptions[x]}</i>"
                     context.bot.send_message(CHAT_ID, feed_info, parse_mode='HTMl')
                 # overwrite the existing item with the latest item
-                postgres_update(str(rss_d.entries[0]['description']), name, str(rss_d.entries[0]['title']), str(rss_d.entries[0]['title']))
+                postgres_update(str(rss_d.entries[0]['link']), name, str(rss_d.entries[0]['title']))
         except IndexError:
             LOGGER.info(f"There was an error while parsing this feed: {url_list[0]}")
             continue
