@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import feedparser
+import feedparser.sanitizer
 import logging
 from dotenv import load_dotenv
 
@@ -50,6 +51,11 @@ try:
     CUSTOM_MESSAGES = getConfig('CUSTOM_MESSAGES')    
 except:
     pass
+
+feedparser.sanitizer._HTMLSanitizer.acceptable_elements.remove('img')
+feedparser.sanitizer._HTMLSanitizer.acceptable_elements.remove('p')
+feedparser.sanitizer._HTMLSanitizer.acceptable_elements.remove('a')
+
 
 
 # Bot Commands
@@ -190,7 +196,7 @@ def cmd_get(update, context):
                 msg = update.effective_message.reply_text(f"Getting the last <b>{count}</b> item(s), please wait!", parse_mode='HTMl')
                 for num_feeds in range(feed_num):
                     rss_d = feedparser.parse(feedurl[0])
-                    feedinfo +=f"<b>{rss_d.entries[num_feeds]['title']}</b>\n{rss_d.entries[num_feeds]['description']}\n\n"
+                    feedinfo +=f"<b><u>{rss_d.entries[num_feeds]['title']}</u></b>👉 {rss_d.entries[num_feeds]['link']}\n\n<i>{rss_d.entries[num_feeds]['description']}</i>\n\n"
                 msg.edit_text(feedinfo, parse_mode='HTMl')    
         else:
             update.effective_message.reply_text("No such feed found.")
@@ -209,8 +215,8 @@ def cmd_rss_sub(update, context):
             # try if the url is a valid RSS feed
             rss_d = feedparser.parse(context.args[1])
             rss_d.entries[0]['title']
-            title_rss =  f"<b>{rss_d.feed.title}</b> latest record:\n<b>{rss_d.entries[0]['title']}</b>\n{rss_d.entries[0]['link']}"    
-            postgres_write(context.args[0], context.args[1], str(rss_d.entries[0]['link']), str(rss_d.entries[0]['title']))
+            title_rss =  f"<b>{rss_d.feed.title}</b> latest record:\n\n<b><u>{rss_d.entries[0]['title']}</u></b>👉 {rss_d.entries[0]['link']}\n\n<i>{rss_d.entries[0]['description']}</i>\n\n"     
+            postgres_write(context.args[0], context.args[1], str(rss_d.entries[0]['description']), str(rss_d.entries[0]['title']))
             addfeed = f"<b>Subscribed!</b>\nTitle: {context.args[0]}\nFeed: {context.args[1]}"
             update.effective_message.reply_text(addfeed, parse_mode='HTMl')
             update.effective_message.reply_text(title_rss, parse_mode='HTMl')
@@ -256,18 +262,18 @@ def rss_monitor(context):
             feed_descriptions = []
             # check whether the URL & title of the latest item is in the database
             rss_d = feedparser.parse(url_list[0])
-            if (url_list[1] != rss_d.entries[0]['link'] and url_list[2] != rss_d.entries[0]['title'] and url_list[1] != rss_d.entries[0]['link']):
+            if (url_list[1] != rss_d.entries[0]['description'] and url_list[2] != rss_d.entries[0]['title'] and url_list[3] != rss_d.entries[0]['link']):
                 # check until a new item pops up
-                while (url_list[1] != rss_d.entries[feed_count]['link'] and url_list[2] != rss_d.entries[feed_count]['title'] and url_list[3] != rss_d.entries[feed_count]['description']):
+                while (url_list[1] != rss_d.entries[feed_count]['description'] and url_list[2] != rss_d.entries[feed_count]['title']):
                     feed_titles.insert(0, rss_d.entries[feed_count]['title'])
-                    feed_urls.insert(0, rss_d.entries[feed_count]['link'])
+                    feed_urls.insert(0, rss_d.entries[feed_count]['description'])
                     feed_urls.insert(0, rss_d.entries[feed_count]['description'])
                     feed_count += 1
                 for x in range(len(feed_urls)):
                     feed_info = f"{CUSTOM_MESSAGES}\n<b>{feed_titles[x]}</b>\n{feed_urls[x]}</b>\n{feed_descriptions[x]}"
                     context.bot.send_message(CHAT_ID, feed_info, parse_mode='HTMl')
                 # overwrite the existing item with the latest item
-                postgres_update(str(rss_d.entries[0]['link']), name, str(rss_d.entries[0]['title']), str(rss_d.entries[0]['title']))
+                postgres_update(str(rss_d.entries[0]['description']), name, str(rss_d.entries[0]['title']), str(rss_d.entries[0]['title']))
         except IndexError:
             LOGGER.info(f"There was an error while parsing this feed: {url_list[0]}")
             continue
